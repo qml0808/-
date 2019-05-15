@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Members</title>
+  <link href="assets/bootstrap.css" rel="stylesheet">
+  <link href="assets/index.css" rel="stylesheet">
+</head>
+
+<body>
+  <header>
+    <div class="navbar navbar-dark navbar-expand-sm bg-dark shadow-sm">
+      <div class="container">
+        <a href="#" class="navbar-brand d-flex justify-content-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-aperture"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav">
+            <li class="nav-item active"><a class="nav-link" href="#">Members</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main role="main">
+    <section class="jumbotron mb-0 bg-white text-center">
+      <div class="container">
+        <h1 class="display-4">Members</h1>
+        <p class="lead text-muted">All members~</p>
+        <div>
+          <a href="/add.html" class="btn btn-primary my-2">New member</a>
+          <a href="#" class="btn btn-secondary my-2">Secondary action</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-5 bg-light">
+      <div class="container">
+        <div id="members" class="row">
+         
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="py-5 text-muted">
+    <p class="container">
+      <span>this demo &copy; heima
+      <a class="float-right" href="#">Back to top &uparrow;</a>
+    </p>
+  </footer>
+</body>
+<script src="/assets/jquery.js"></script>
+<script src="/assets/template-web.js"></script>
+<script id="tmp" type="text/html">
+  {{ each members }}
+   <div class="col-lg-4 col-md-6">
+            <div class="card mb-4">
+              <div class="card-img-top py-4 bg-dark text-center">
+                <img class="img-thumbnail mb-2 rounded-circle" src="{{$value.avatar}}" alt="heima" width="128">
+                <h3 class="card-title text-light">{{$value.name}}</h3>
+              </div>
+              <div class="card-body">
+                <p class="card-text">{{$value.bio}}</p>
+                <a href="/detail.html?id={{$value.id}}" class="card-link">View</a>
+                <a id='{{$value.id}}' href="#" class="card-link text-danger">Delete</a>
+              </div>
+            </div>
+          </div>
+    {{/each}}
+</script>
+<script>
+  // 创建一个last参数
+  let id = null;
+  // 设置开关
+  let isOk = true;
+  /* 封装获取数据函数 */
+  function getData (){
+    isOk = false;
+    $.ajax({
+    // 通过异步对象获取数据  API : GET /api/member-list-last  
+    type:'GET',
+    url:'/api/member-list-last',
+    data:{
+      last:id,
+    },
+    complete:()=>{
+      isOk = true;
+    },
+    success:(res)=>{
+      // 记录最后一个数据的id
+      id = res[res.length - 1].id;
+         // 将获取到的数据动态添加的页面上   
+      let html = template('tmp',{
+        members:res
+      })
+      $("#members").append(html)
+
+      // 需求3 点击delete按钮删除对应的用户
+        // 1 给delete按钮添加点击事件  text-danger
+        $('.text-danger').on('click',function(e){
+          // 2 阻止a标签默认行为
+          e.preventDefault();
+          // 3 获取事件源的id
+          let id = $(this).attr('id'); 
+          // 让用户确认是否删除
+          if(confirm('确定删除吗？')){
+             // 4 向删除接口发送带有id参数的请求
+              $.ajax({
+                url:'/api/member-delete',
+                method:'GET',
+                data:{
+                  id,
+                },
+                success:(res)=>{
+                  alert(res.message)
+                  // 重新加载页面  因为此时服务端已经把数据库中的数据删除了
+                  // 所以只要用dom元素删除页面中对应的标签即可
+                  $(this).parent().parent().parent().remove();
+                }
+              })
+          }
+        })
+    }
+  })
+  }
+
+// 需求1 动态渲染静态页面
+window.onload = function(){
+  getData()
+}
+
+// 需求2 监视页面滚动 如果页面距离底部的距离小于100px 加载更多数据
+$(document).scroll(()=>{
+  let ctnH = $(document).height();  //内容高度
+  let viewH = $(window).height();   //视口高度
+  let scr = $(window).scrollTop();  //滚动距离
+  // 距离判定
+  if(ctnH - viewH - scr <= 100){ //页面距离底部的距离小于100px
+    // 再次请求数据
+    if(isOk ){
+      getData()
+    }else{
+      return;
+    }
+  }
+})
+
+
+
+
+</script>
+</html>
